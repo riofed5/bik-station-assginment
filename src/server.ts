@@ -1,55 +1,66 @@
-import express from "express";
-import * as fs from "fs";
-import csv from "csv-parser";
-import { Connection, createConnection } from "mysql2";
+const express = require("express");
+const fs = require("fs");
+const csv = require("csv-parser");
+const connection = require("./database/db");
+
+const filterRow = (row: any) => {
+  return (
+    parseInt(row["Covered distance (m)"]) > 10 &&
+    parseInt(row["Duration (sec.)"]) > 10
+  );
+};
+
+const records: any[] = [];
+const notRecords: any[] = [];
+
+// Read the .csv file
+fs.createReadStream(__dirname + "/data2.csv")
+  .pipe(csv())
+  .on("data", (row: any) => {
+    const validRow = filterRow(row);
+    if (validRow) {
+      records.push(row);
+    } else {
+      notRecords.push(row);
+    }
+  })
+  .on("end", () => {
+    // Create the table
+    connection.query(
+      `
+      CREATE TABLE IF NOT EXISTS data (
+        departure_time DATETIME,
+        return_time DATETIME,
+        departure_station_id INT,
+        departure_station_name VARCHAR(255),
+        return_station_id INT,
+        return_station_name VARCHAR(255),
+        covered_distance INT,
+        duration INT
+      );
+    `,
+      (error: any, results: any) => {
+        if (error) throw error;
+
+        const values = records.map((row) => Object.values(row));
+
+        // Insert the data into the table using the bulk method
+        connection.query(
+          "INSERT INTO data (departure_time, return_time, departure_station_id, departure_station_name, return_station_id, return_station_name, covered_distance, duration) VALUES ?",
+          [values],
+          (error: any) => {
+            if (error) throw error;
+            console.log("Data imported successfully");
+          }
+        );
+      }
+    );
+  });
 
 const app = express();
 
 app.listen(3000, () => {
+  console.log("==============================");
   console.log("Server listening on port 3000");
+  console.log("==============================");
 });
-
-// Create a new connection to the MySQL database
-// const connection: Connection = createConnection({
-//   host: 'localhost',
-//   user: 'your_username',
-//   password: 'your_password',
-//   database: 'your_database',
-// });
-
-// Open the .csv file and create a new csv parser instance
-const fileStream = fs.createReadStream(`${__dirname}/data.csv`);
-const csvParser = csv({
-  headers: true,
-});
-
-// Store the records in an array
-const records: any[] = [];
-csvParser.on("data", (row: any) => {
-  console.log(row);
-
-  records.push(row);
-});
-
-// Insert the records into the database using a bulk insert method
-csvParser.on("end", () => {
-  const placeholders = records.map(() => "(?, ?)").join(",");
-  const values = records.reduce(
-    (acc: any[], row: any) => acc.concat([row.column1, row.column2]),
-    []
-  );
-  console.log("placeholder::", placeholders);
-
-  // const query = `INSERT INTO table_name (column1, column2) VALUES ${placeholders}`;
-  // connection.query(query, values, (err: any, res: any) => {
-  //   if (err) {
-  //     console.error(err.stack);
-  //   } else {
-  //     console.log(res.affectedRows);
-  //   }
-  // });
-  console.log("Finished parsing CSV file");
-});
-
-// Start the parsing process
-fileStream.pipe(csvParser);

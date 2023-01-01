@@ -1,0 +1,14 @@
+﻿Departure,Return,Departure station id,Departure station name,Return station id,Return station name,Covered distance (m),Duration (sec.)
+2021-05-31T23:57:25,2021-06-01T00:05:46,094,Laajalahden aukio,100,Teljäntie,2043,500
+2021-05-31T23:56:59,2021-06-01T00:07:14,082,Töölöntulli,113,Pasilan asema,1870,611
+2021-05-31T23:56:44,2021-06-01T00:03:26,123,Näkinsilta,121,Vilhonvuorenkatu,1025,399
+2021-05-31T23:56:23,2021-06-01T00:29:58,004,Viiskulma,065,Hernesaarenranta,4318,2009
+2021-05-31T23:56:11,2021-06-01T00:02:02,004,Viiskulma,065,Hernesaarenranta,1400,350
+2021-05-31T23:54:48,2021-06-01T00:00:57,292,Koskelan varikko,133,Paavalinpuisto,1713,366
+2021-05-31T22:58:45,2021-05-31T22:59:06,121,Vilhonvuorenkatu,121,Vilhonvuorenkatu,0,17
+2021-05-31T22:58:42,2021-05-31T23:04:14,040,Hakaniemi (M),019,Rautatientori / itä,1202,327
+2021-05-31T22:57:45,2021-05-31T23:19:21,141,Intiankatu,089,Tilkanvierto,4425,1292
+2021-05-31T22:57:08,2021-05-31T23:16:49,057,Lauttasaaren ostoskeskus,003,Kapteeninpuistikko,4028,1178
+2021-05-31T22:56:47,2021-05-31T23:01:00,024,Mannerheimintie,049,Annankatu,786,248
+2021-05-31T22:56:29,2021-05-31T23:01:07,162,Leppäsuonaukio,036,Apollonkatu,796,272
+2021-05-31T22:55:42,2021-05-31T22:56:03,262,Siilitie (M),262,Siilitie (M),0,17
