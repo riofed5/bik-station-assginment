@@ -5,11 +5,13 @@ function FileUploadForm() {
 
   // Handle File from server
   const [notValidDataFile, setNotValidDataFile] = useState("");
+  const [loading, setLoading] = useState(false);
 
   // Handle upload file
   const handleSubmit = (event: React.FormEvent) => {
     event.preventDefault();
 
+    setLoading(true);
     const file = (fileInput as any).current?.files[0];
 
     if (!file) {
@@ -18,8 +20,6 @@ function FileUploadForm() {
 
     const formData = new FormData();
     formData.append("file", file);
-
-    alert("File send to server");
 
     fetch("http://localhost:7000/api/upload", {
       method: "POST",
@@ -30,6 +30,7 @@ function FileUploadForm() {
         console.log("data::", data);
         if (data.status) {
           setNotValidDataFile(data.fileName);
+          setLoading(false);
         }
       });
   };

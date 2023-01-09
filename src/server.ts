@@ -2,81 +2,64 @@ import express, { Request, Response } from "express";
 import fs from "fs";
 import path from "path";
 import connection from "./database/db";
-import { write, parse } from "fast-csv";
 import multer from "multer";
 import cors from "cors";
+import { validateData, writeDataToFile } from "./utility/utility";
 
-const writeDataToFile = (data: any) => {
-  const stream = fs.createWriteStream(
-    path.join(__dirname, "../download/NotValidData.csv")
-  );
+const validDataArr: any[] = [];
+const notValidDataArr: any[] = [];
 
-  write(data, { headers: true }).pipe(stream);
-};
+const batchSize = 100000;
 
-const filterRow = (row: any) => {
-  return (
-    parseInt(row["Covered distance (m)"]) > 10 &&
-    parseInt(row["Duration (sec.)"]) > 10
-  );
-};
+// Models
+const insertDataToDb = (records: any[]) => {
+  // Return a Promise that resolves if the operation was successful, or rejects if there was an error
+  return new Promise((resolve, reject) => {
+    // Create the table named data
+    connection.query(
+      `
+    CREATE TABLE IF NOT EXISTS data (
+      id INT PRIMARY KEY AUTO_INCREMENT,
+      departure_time DATETIME,
+      return_time DATETIME,
+      departure_station_id INT,
+      departure_station_name VARCHAR(255),
+      return_station_id INT,
+      return_station_name VARCHAR(255),
+      covered_distance INT,
+      duration INT
+    );
+  `,
+      (error: any, results: any) => {
+        if (error) {
+          reject(error); // Reject the Promise if there was an error
+          return;
+        }
 
-const insertDataToDb = (pathToSelectedFile: string) => {
-  const records: any[] = [];
-  const notRecords: any[] = [];
+        const values = records.map((row) => Object.values(row));
 
-  // Read the .csv file
-  fs.createReadStream(pathToSelectedFile)
-    .pipe(parse({ headers: true }))
-    .on("data", (row: any) => {
-      const validRow = filterRow(row);
-      if (validRow) {
-        records.push(row);
-      } else {
-        notRecords.push(row);
-      }
-    })
-    .on("end", () => {
-      // Create the table
-      connection.query(
-        `
-      CREATE TABLE IF NOT EXISTS data (
-        departure_time DATETIME,
-        return_time DATETIME,
-        departure_station_id INT,
-        departure_station_name VARCHAR(255),
-        return_station_id INT,
-        return_station_name VARCHAR(255),
-        covered_distance INT,
-        duration INT
-      );
-    `,
-        (error: any, results: any) => {
-          if (error) throw error;
-
-          const values = records.map((row) => Object.values(row));
+        for (let i = 0; i < values.length; i += batchSize) {
+          const batch = values.slice(i, i + batchSize);
 
           // Insert the data into the table using the bulk method
           connection.query(
             "INSERT INTO data (departure_time, return_time, departure_station_id, departure_station_name, return_station_id, return_station_name, covered_distance, duration) VALUES ?",
-            [values],
+            [batch],
             (error: any) => {
-              if (error) throw error;
-              console.log("Data imported successfully");
+              if (error) {
+                reject(error); // Reject the Promise if there was an error
+                return;
+              }
             }
           );
         }
-      );
-
-      // Write the not valid data to file
-      writeDataToFile(notRecords);
-    });
+        resolve(true); // Resolve the Promise if the operation was successful
+      }
+    );
+  });
 };
 
-const app = express();
-
-app.use(cors());
-
+// Controllers
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
     cb(null, "upload");
@@ -88,7 +71,7 @@ const storage = multer.diskStorage({
 const upload = multer({ storage: storage }).single("file");
 
 const uploadData = (req: Request, res: Response) => {
-  upload(req, res, function (err) {
+  upload(req, res, async function (err) {
     if (err instanceof multer.MulterError) {
       return res.status(500).json(err);
     } else if (err) {
@@ -98,23 +81,47 @@ const uploadData = (req: Request, res: Response) => {
     try {
       if (req.file) {
         const pathOfFile = path.join(__dirname, `../${req.file?.path}`);
-        insertDataToDb(pathOfFile);
 
-        fs.access(
-          path.join(__dirname, "../download/NotValidData.csv"),
-          fs.constants.F_OK,
-          (error) => {
-            if (error) {
-              console.log("File does not exist");
-              res.status(200).send({ status: false });
-            } else {
-              console.log("File exists");
-              res
-                .status(200)
-                .send({ status: true, fileName: "NotValidData.csv" });
+        try {
+          // validate data
+          const validateResult = await validateData(
+            pathOfFile,
+            validDataArr,
+            notValidDataArr
+          );
+          console.log("validateResult: ", validateResult);
+          if (validateResult) {
+            // Write not valid data to file
+            const writeDataToFileResult = await writeDataToFile(
+              notValidDataArr
+            );
+
+            // Insert read data to database
+            const insertDataToDbResult = await insertDataToDb(validDataArr);
+            console.log("writeDataToFileResult: ", writeDataToFileResult);
+            console.log("insertDataToDbResult: ", insertDataToDbResult);
+
+            if (writeDataToFileResult && insertDataToDbResult) {
+              fs.access(
+                path.join(__dirname, "../download/NotValidData.csv"),
+                fs.constants.F_OK,
+                (error) => {
+                  if (error) {
+                    console.log("File does not exist");
+                    res.status(200).send({ status: false });
+                  } else {
+                    console.log("File exists");
+                    res
+                      .status(200)
+                      .send({ status: true, fileName: "NotValidData.csv" });
+                  }
+                }
+              );
             }
           }
-        );
+        } catch (err) {
+          console.log(err);
+        }
       } else {
         throw new Error("Missing file in request");
       }
@@ -123,6 +130,10 @@ const uploadData = (req: Request, res: Response) => {
     }
   });
 };
+
+const app = express();
+
+app.use(cors());
 
 app.post("/api/upload", uploadData);
 app.get("/", (req: Request, res: Response) => {
@@ -133,8 +144,9 @@ app.get("/api/download", (req: Request, res: Response) => {
   res.sendFile(path.join(__dirname, "../download/NotValidData.csv"));
 });
 
-app.listen(7000, () => {
+const PORT = 7000 || process.env.PORT;
+app.listen(PORT, () => {
   console.log("==============================");
-  console.log("Server listening on port 3000");
+  console.log("Server listening on port ", PORT);
   console.log("==============================");
 });
