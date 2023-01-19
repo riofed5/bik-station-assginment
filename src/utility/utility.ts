@@ -21,8 +21,8 @@ const writeDataToFile = (data: any) => {
 
 const filterRow = (row: any) => {
   return (
-    parseInt(row["Covered distance (m)"]) > 10 &&
-    parseInt(row["Duration (sec.)"]) > 10
+    parseInt(row["Covered distance (m)"]) >= 10 &&
+    parseInt(row["Duration (sec.)"]) >= 10
   );
 };
 
