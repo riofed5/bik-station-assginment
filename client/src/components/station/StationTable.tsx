@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
+import { handleSortByKey } from "../../utility";
 
 const columns = [
-  "Departure Station Name",
-  "Return Station Name",
-  "Covered Distance (Km)",
-  "Duration (Minute)",
+  { title: "Station Name", sortable: true, key: "Nimi" },
+  { title: "Station ID", sortable: false, key: "ID" },
 ];
 
 interface PropsTable {
@@ -14,20 +14,29 @@ interface PropsTable {
   page: number;
   totalRows: number;
 }
-const JourneyTable = ({
+
+const StationTable = ({
   data,
   keyword,
   handleChangePage,
   page,
   totalRows,
 }: PropsTable) => {
+  const [tableData, setTableData] = useState([]);
+  const [sortedData, setSortedData] = useState([]);
   const [fromTo, setFromTo] = useState({ from: 0, to: 0 });
   const [nextBtnDisable, setNextBtnDisable] = useState(false);
+
+  const [sortFromAtoZ, setSortFromAtoZ] = useState(true);
+
+  useEffect(() => {
+    setTableData(data);
+  }, [data]);
 
   useEffect(() => {
     if (keyword === "") {
       if (data.length > 0) {
-        let sortedData = [...data].map((singleData) => singleData.id);
+        let sortedData = [...data].map((singleData) => singleData.FID);
         const min = Math.min(...sortedData);
         const max = Math.max(...sortedData);
         setNextBtnDisable(max === totalRows);
@@ -49,13 +58,14 @@ const JourneyTable = ({
               Data index from {fromTo?.from} to {fromTo?.to} of {totalRows}
             </p>
             <button
-              className="btn-prev-page"
+              className="btn-prev-page custom-btn"
               onClick={() => handleChangePage("prev")}
               disabled={page === 1}
             >
               &laquo; Previous
             </button>
             <button
+              className="custom-btn"
               onClick={() => handleChangePage("next")}
               disabled={nextBtnDisable}
             >
@@ -69,32 +79,57 @@ const JourneyTable = ({
         <table id="customers">
           <tr>
             {columns.map((column, i) => {
-              return <th key={i}>{column}</th>;
+              return (
+                <th key={i}>
+                  {column.title}{" "}
+                  {column.sortable && (
+                    <button
+                      className="sort-btn"
+                      onClick={() => {
+                        handleSortByKey(
+                          tableData,
+                          sortFromAtoZ,
+                          column.key,
+                          setSortedData
+                        );
+                        setSortFromAtoZ(!sortFromAtoZ);
+                      }}
+                    >
+                      (a to z)
+                    </button>
+                  )}
+                </th>
+              );
             })}
           </tr>
-          {data.sort().map((singleData: any, index: any) => {
-            return (
-              <tr key={index}>
-                <td>{singleData.departure_station_name}</td>
-                <td>{singleData.return_station_name}</td>
-                <td>{singleData.covered_distance / 1000}</td>
-                <td>{Math.round(singleData.duration / 60).toFixed(2)}</td>
-              </tr>
-            );
-          })}
+          {(sortedData.length > 0 ? sortedData : tableData).map(
+            (singleData: any) => {
+              return (
+                <tr key={singleData.Nimi}>
+                  <td>
+                    <Link to={`/singleStation/${singleData.Nimi}`}>
+                      {singleData.Nimi}
+                    </Link>
+                  </td>
+                  <td>{singleData.ID}</td>
+                </tr>
+              );
+            }
+          )}
         </table>
       </div>
       <div className="navigation-container">
         {!keyword && (
           <>
             <button
-              className="btn-prev-page"
+              className="btn-prev-page custom-btn"
               onClick={() => handleChangePage("prev")}
               disabled={page === 1}
             >
               &laquo; Previous
             </button>
             <button
+              className="custom-btn"
               onClick={() => handleChangePage("next")}
               disabled={nextBtnDisable}
             >
@@ -107,4 +142,4 @@ const JourneyTable = ({
   );
 };
 
-export default JourneyTable;
+export default StationTable;

@@ -26,7 +26,7 @@ const filterRow = (row: any) => {
   );
 };
 
-const validateData = (
+const validateDataJourney = (
   pathToSelectedFile: string,
   records: any[],
   notRecords: any[]
@@ -51,4 +51,20 @@ const validateData = (
   });
 };
 
-export { validateData, writeDataToFile };
+const validateDataStation = (pathToSelectedFile: string, records: any[]) => {
+  return new Promise((resolve, reject) => {
+    fs.createReadStream(pathToSelectedFile)
+      .pipe(parse({ headers: true }))
+      .on("data", (row: any) => {
+        records.push(row);
+      })
+      .on("end", () => {
+        resolve(true);
+      })
+      .on("error", (error) => {
+        reject(error);
+      });
+  });
+};
+
+export { validateDataJourney, validateDataStation, writeDataToFile };

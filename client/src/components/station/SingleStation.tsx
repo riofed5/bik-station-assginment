@@ -1,15 +1,24 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
-import { URL } from "../App";
+import { URL } from "../../utility";
 
 type StationParams = {
   nameOfStation: string;
+};
+
+const fetchSpecificData = async (endpoint: string, stationName: string) => {
+  const response = await fetch(`${URL}/${endpoint}?station=${stationName}`);
+
+  const json = await response.json();
+
+  return json;
 };
 
 const SingleStation = () => {
   const { nameOfStation } = useParams<StationParams>();
   const [detail, setDetail] = useState({
     name: "",
+    address: "",
     numberOfJourneyStartFrom: 0,
     numberOfJourneyEndingAt: 0,
     distanceOfJouneyStartFromStation: 0,
@@ -18,45 +27,45 @@ const SingleStation = () => {
     top5Return: [] as any[],
   });
 
-  const fetchDetailStation = async (stationName: string) => {
+  const fetchDetailStation = async (stationName = "") => {
     try {
-      const startFromStation = await fetch(
-        `${URL}/getDetailOfDepartStation?station=${stationName}`
-      );
-      const startFromStationJson = await startFromStation.json();
+      const address = await fetchSpecificData("getAddressStation", stationName);
+      const addressString = `${address.Adress}, ${address.Kaupunki} `;
 
-      const endAtStation = await fetch(
-        `${URL}/getDetailOfReturnStation?station=${stationName}`
-      );
-
-      const endAtStationJson = await endAtStation.json();
-
-      const top5DepatureStationFromStation = await fetch(
-        `${URL}/getTop5DepartStationEndingAtStation?station=${stationName}`
+      const startFromStation = await fetchSpecificData(
+        "getDetailOfDepartStation",
+        stationName
       );
 
-      const top5DepartJson = await top5DepatureStationFromStation.json();
+      const endAtStation = await fetchSpecificData(
+        "getDetailOfReturnStation",
+        stationName
+      );
 
-      const top5Depart = [...top5DepartJson].map(
+      const top5DepatureStationFromStation = await fetchSpecificData(
+        "getTop5DepartStationEndingAtStation",
+        stationName
+      );
+
+      const top5Depart = [...top5DepatureStationFromStation].map(
         (el) => el.departure_station_name
       );
-      const top5ReturnStationFromStation = await fetch(
-        `${URL}/getTop5ReturnStationStartFromStation?station=${stationName}`
+      const top5ReturnStationFromStation = await fetchSpecificData(
+        "getTop5ReturnStationStartFromStation",
+        stationName
       );
 
-      const top5ReturnJson = await top5ReturnStationFromStation.json();
-
-      const top5Return = [...top5ReturnJson].map(
+      const top5Return = [...top5ReturnStationFromStation].map(
         (el) => el.return_station_name
       );
 
       setDetail({
         name: stationName,
-        numberOfJourneyStartFrom: startFromStationJson[0].count,
-        numberOfJourneyEndingAt: endAtStationJson[0].count,
-        distanceOfJouneyStartFromStation:
-          startFromStationJson[0].total_distance,
-        distanceOfJouneyEndAtStation: endAtStationJson[0].total_distance,
+        address: addressString,
+        numberOfJourneyStartFrom: startFromStation[0].count,
+        numberOfJourneyEndingAt: endAtStation[0].count,
+        distanceOfJouneyStartFromStation: startFromStation[0].total_distance,
+        distanceOfJouneyEndAtStation: endAtStation[0].total_distance,
         top5Depart: top5Depart,
         top5Return: top5Return,
       });
@@ -76,7 +85,7 @@ const SingleStation = () => {
       <h1>{nameOfStation}</h1>
       <ul>
         <li>Name of station: {nameOfStation}</li>
-
+        <li>Address : {detail.address}</li>
         <li>
           Total number of journeys starting from the station :{" "}
           {detail.numberOfJourneyStartFrom}

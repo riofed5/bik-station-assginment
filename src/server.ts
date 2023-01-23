@@ -4,15 +4,74 @@ import path from "path";
 import pool from "./database/db";
 import multer from "multer";
 import cors from "cors";
-import { validateData, writeDataToFile } from "./utility/utility";
+import {
+  validateDataJourney,
+  writeDataToFile,
+  validateDataStation,
+} from "./utility/utility";
 
-const validDataArr: any[] = [];
-const notValidDataArr: any[] = [];
+// Journey array data
+const validJourneyArr: any[] = [];
+const notValidJourneyArr: any[] = [];
+
+// Station array data
+const validStationArr: any[] = [];
 
 const batchSize = 100000;
 
+const insertStationToDb = (records: any[]) => {
+  return new Promise((resolve, reject) => {
+    // Create the table named data
+    pool.query(
+      `
+      CREATE TABLE IF NOT EXISTS station (
+        FID INT PRIMARY KEY,
+        ID INT,
+        Nimi VARCHAR(255),
+        Namn VARCHAR(255),
+        Name VARCHAR(255),
+        Osoite VARCHAR(255),
+        Adress VARCHAR(255),
+        Kaupunki VARCHAR(255),
+        Stad VARCHAR(255),
+        Operaattor VARCHAR(255),
+        Kapasiteet INT,
+        x FLOAT,
+        y FLOAT
+    );
+  `,
+      (error: any, results: any) => {
+        if (error) {
+          reject(error); // Reject the Promise if there was an error
+          return;
+        }
+
+        const values = records.map((row) => Object.values(row));
+
+        for (let i = 0; i < values.length; i += batchSize) {
+          const batch = values.slice(i, i + batchSize);
+
+          // Insert the data into the table using the bulk method
+          pool.query(
+            "INSERT INTO station (FID, ID, Nimi, Namn, Name, Osoite, Adress, Kaupunki, Stad, Operaattor, Kapasiteet, x, y) VALUES ?",
+            [batch],
+            (error: any) => {
+              if (error) {
+                reject(error); // Reject the Promise if there was an error
+                return;
+              }
+            }
+          );
+        }
+
+        resolve(true); // Resolve the Promise if the operation was successful
+      }
+    );
+  });
+};
+
 // Models
-const insertDataToDb = (records: any[]) => {
+const insertJourneyToDb = (records: any[]) => {
   // Return a Promise that resolves if the operation was successful, or rejects if there was an error
   return new Promise((resolve, reject) => {
     // Create the table named data
@@ -53,6 +112,7 @@ const insertDataToDb = (records: any[]) => {
             }
           );
         }
+
         resolve(true); // Resolve the Promise if the operation was successful
       }
     );
@@ -89,14 +149,13 @@ const getStationList = (params: string[]) => {
   return new Promise((resolve, reject) => {
     // Create the table named data
     pool.query(
-      ` WITH cte as (
-        SELECT DISTINCT departure_station_name as station_name FROM data
-        UNION
-        SELECT DISTINCT return_station_name as station_name FROM data
-    )
-    SELECT ROW_NUMBER() OVER(ORDER BY station_name) as id, station_name FROM cte LIMIT 50 OFFSET ${offsetValue}`,
+      `select * from station LIMIT 50 OFFSET ${offsetValue}`,
       (error: any, results: any) => {
         if (error) {
+          if (error.code === "ER_NO_SUCH_TABLE") {
+            resolve([]);
+            return;
+          }
           reject(error); // Reject the Promise if there was an error
           return;
         }
@@ -153,12 +212,28 @@ const getTotalJourney = () => {
     // Create the table named data
     pool.query(
       "SELECT COUNT(*) AS totalRow FROM data;",
-      (error: any, results: any) => {
+      (error: any, result: any) => {
         if (error) {
           reject(error); // Reject the Promise if there was an error
           return;
         }
-        resolve(results); // Resolve the Promise if the operation was successful
+        resolve(result[0]); // Resolve the Promise if the operation was successful
+      }
+    );
+  });
+};
+
+const getTotalStation = () => {
+  return new Promise((resolve, reject) => {
+    // Create the table named data
+    pool.query(
+      "SELECT COUNT(*) AS totalRow FROM station",
+      (error: any, result: any) => {
+        if (error) {
+          reject(error); // Reject the Promise if there was an error
+          return;
+        }
+        resolve(result[0]); // Resolve the Promise if the operation was successful
       }
     );
   });
@@ -202,6 +277,51 @@ const getDetailEndingAtTheStation = (station: string) => {
   });
 };
 
+const getAddressOfStation = (station: string) => {
+  return new Promise((resolve, reject) => {
+    // Create the table named data
+    pool.query(
+      `select * from station where Nimi='${station}'`,
+      (error: any, results: any) => {
+        if (error) {
+          reject(error); // Reject the Promise if there was an error
+          return;
+        }
+        resolve(results[0]); // Resolve the Promise if the operation was successful
+      }
+    );
+  });
+};
+
+const getJourneyByKeywords = (keywords: string[]) => {
+  let subQuery = "WHERE ";
+  let condition = "";
+  for (let i = 0; i < keywords.length; i++) {
+    condition += `( departure_station_name like '%${keywords[i]}%' or return_station_name like '%${keywords[i]}%' or covered_distance like '%${keywords[i]}%' )`;
+    if (i !== keywords.length - 1) {
+      condition += " AND ";
+    }
+  }
+
+  subQuery += condition;
+
+  console.log(
+    `SELECT id, departure_station_name, return_station_name, covered_distance, duration FROM data ${subQuery} LIMIT 50`
+  );
+  return new Promise((resolve, reject) => {
+    // Create the table named data
+    pool.query(
+      `SELECT id, departure_station_name, return_station_name, covered_distance, duration FROM data ${subQuery} LIMIT 50`,
+      (error: any, results: any) => {
+        if (error) {
+          reject(error); // Reject the Promise if there was an error
+          return;
+        }
+        resolve(results); // Resolve the Promise if the operation was successful
+      }
+    );
+  });
+};
 // const addNewJourney= (params:any[])=>{
 //   return new Promise((resolve, reject) => {
 //     // Create the table named data
@@ -232,7 +352,7 @@ const storage = multer.diskStorage({
 });
 const upload = multer({ storage: storage }).single("file");
 
-const uploadData = (req: Request, res: Response) => {
+const uploadJourney = (req: Request, res: Response) => {
   upload(req, res, async function (err) {
     if (err instanceof multer.MulterError) {
       return res.status(500).json(err);
@@ -246,20 +366,22 @@ const uploadData = (req: Request, res: Response) => {
 
         try {
           // validate data
-          const validateResult = await validateData(
+          const validateResult = await validateDataJourney(
             pathOfFile,
-            validDataArr,
-            notValidDataArr
+            validJourneyArr,
+            notValidJourneyArr
           );
           console.log("validateResult: ", validateResult);
           if (validateResult) {
             // Write not valid data to file
             const writeDataToFileResult = await writeDataToFile(
-              notValidDataArr
+              notValidJourneyArr
             );
 
             // Insert read data to database
-            const insertDataToDbResult = await insertDataToDb(validDataArr);
+            const insertDataToDbResult = await insertJourneyToDb(
+              validJourneyArr
+            );
             console.log("writeDataToFileResult: ", writeDataToFileResult);
             console.log("insertDataToDbResult: ", insertDataToDbResult);
 
@@ -286,10 +408,54 @@ const uploadData = (req: Request, res: Response) => {
           res.status(400).send("Imported data has been failed");
         }
       } else {
-        throw new Error("Missing file in request");
+        console.log(new Error("Missing file in request"));
       }
     } catch (err) {
-      throw err;
+      console.log("Upload file Journey failed: ", err);
+    }
+  });
+};
+
+const uploadStation = (req: Request, res: Response) => {
+  upload(req, res, async function (err) {
+    if (err instanceof multer.MulterError) {
+      return res.status(500).json(err);
+    } else if (err) {
+      return res.status(500).json(err);
+    }
+
+    try {
+      if (req.file) {
+        const pathOfFile = path.join(__dirname, `../${req.file?.path}`);
+
+        try {
+          // validate data
+          const validateResult = await validateDataStation(
+            pathOfFile,
+            validStationArr
+          );
+          console.log("validateResult: ", validateResult);
+          if (validateResult) {
+            console.log("");
+            // Insert read data to database
+            const insertDataToDbResult = await insertStationToDb(
+              validStationArr
+            );
+            console.log("insertDataToDbResult: ", insertDataToDbResult);
+
+            if (insertDataToDbResult) {
+              res.status(200).send({ status: "OK" });
+            }
+          }
+        } catch (err) {
+          console.log(err);
+          res.status(400).send("Imported data has been failed");
+        }
+      } else {
+        console.log(new Error("Missing file in request"));
+      }
+    } catch (err) {
+      console.log("Upload file station failed: ", err);
     }
   });
 };
@@ -316,6 +482,22 @@ const getTotalRowsOfJourney = async (req: Request, res: Response) => {
   }
 };
 
+const searchJourneyByKeywords = async (req: Request, res: Response) => {
+  if (!req.query.searchKey) {
+    res.status(400).send("Missing SearchKeyword in query");
+  }
+
+  const params = (req.query.searchKey as string).split(" ");
+
+  try {
+    const result = await getJourneyByKeywords(params);
+    res.json(result);
+  } catch (err) {
+    console.error("get Total Rows Of Journey data failed: ", err);
+    res.status(400).send("Bad Request!");
+  }
+};
+
 const getStation = async (req: Request, res: Response) => {
   const params = req.query.page ? ([req.query.page] as string[]) : ["1"];
 
@@ -325,6 +507,15 @@ const getStation = async (req: Request, res: Response) => {
   } catch (err) {
     console.error("get Station data failed: ", err);
     res.status(400).send("Bad Request!");
+  }
+};
+
+const getTotalRowsOfStation = async (req: Request, res: Response) => {
+  try {
+    const result = await getTotalStation();
+    res.json(result);
+  } catch (err) {
+    console.error("get Total Rows Of Journey data failed: ", err);
   }
 };
 
@@ -402,11 +593,30 @@ const getDetailOfReturnStation = async (req: Request, res: Response) => {
   }
 };
 
+const getAddressStation = async (req: Request, res: Response) => {
+  let params: string;
+
+  if (!req.query.station) {
+    res.status(400).send("Missing station in query");
+  }
+  params = req.query.station as string;
+
+  try {
+    const result = await getAddressOfStation(params);
+    res.json(result);
+  } catch (err) {
+    console.error("get Address station failed: ", err);
+    res.status(400).send("Bad Request!");
+  }
+};
+
 const app = express();
 
 app.use(cors());
 
-app.post("/api/upload", uploadData);
+app.post("/api/uploadJourney", uploadJourney);
+app.post("/api/uploadStation", uploadStation);
+
 app.get("/", (req: Request, res: Response) => {
   res.send("Hello");
 });
@@ -418,9 +628,14 @@ app.get("/api/download", (req: Request, res: Response) => {
 // Data of the journey
 app.get("/api/getJourney", getJourney);
 app.get("/api/getTotalJourney", getTotalRowsOfJourney);
+app.get("/api/searchJourneyByKeywords", searchJourneyByKeywords);
 
 // Data of the station
+app.get("/api/getTotalStation", getTotalRowsOfStation);
+
 app.get("/api/getStation", getStation);
+app.get("/api/getAddressStation", getAddressStation);
+
 app.get(
   "/api/getTop5DepartStationEndingAtStation",
   getTop5DepartStationEndingAtStation

@@ -1,3 +1,11 @@
+:root {
+  --pacific-Blue: #153462;
+  --baby-Blue: #457b9d;
+  --light-Yellow: #f77f00;
+}
+a {
+  text-decoration: none;
+}
 body {
   margin: 0;
   padding: 0;
@@ -11,6 +19,10 @@ body {
 code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, "Courier New",
     monospace;
+}
+
+.container {
+  margin: 0 20px;
 }
 
 /* Style for table */
@@ -52,7 +64,7 @@ code {
   margin-right: 10px;
 }
 
-button {
+button.custom-btn {
   text-decoration: none;
   display: inline-block;
   padding: 8px 16px;
@@ -61,7 +73,7 @@ button {
   border: none;
 }
 
-button:disabled {
+button.custom-btn:disabled {
   background-color: #ddd;
   color: rgb(126, 124, 124);
 }
@@ -70,4 +82,30 @@ button:disabled {
   padding: 5px;
   width: 300px;
 }
+
 /* End style for table */
+
+/* Style for navigation bar */
+.navigation {
+  display: flex;
+  flex-flow: row wrap;
+  justify-content: flex-start;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  background-color: var(--pacific-Blue);
+}
+
+.navigation a {
+  text-decoration: none;
+  display: block;
+  padding: 10px 20px;
+  color: white;
+  font-weight: bold;
+}
+
+.navigation a:hover,
+.navigation .active {
+  background-color: var(--baby-Blue);
+}
+/* End style for navigation bar */
