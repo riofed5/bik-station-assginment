@@ -24,3 +24,5 @@ function App() {
 }
 
 export default App;
+
+// SELECT TABLE_NAME FROM information_schema.TABLES WHERE TABLE_NAME = 'data';

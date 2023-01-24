@@ -30,7 +30,7 @@ const SingleStation = () => {
   const fetchDetailStation = async (stationName = "") => {
     try {
       const address = await fetchSpecificData("getAddressStation", stationName);
-      const addressString = `${address.Adress}, ${address.Kaupunki} `;
+      const addressString = `${address.Adress}`;
 
       const startFromStation = await fetchSpecificData(
         "getDetailOfDepartStation",
@@ -81,7 +81,7 @@ const SingleStation = () => {
   }, [nameOfStation]);
 
   return (
-    <div>
+    <div className="container">
       <h1>{nameOfStation}</h1>
       <ul>
         <li>Name of station: {nameOfStation}</li>

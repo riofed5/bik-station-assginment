@@ -4,7 +4,7 @@ import { handleSortByKey } from "../../utility";
 
 const columns = [
   { title: "Station Name", sortable: true, key: "Nimi" },
-  { title: "Station ID", sortable: false, key: "ID" },
+  { title: "Station ID", sortable: true, key: "ID" },
 ];
 
 interface PropsTable {

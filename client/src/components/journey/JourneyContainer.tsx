@@ -69,7 +69,7 @@ const JourneyContainer = () => {
           <input
             ref={searchInputRef}
             type="tex"
-            placeholder="Search"
+            placeholder="Ex: Töölöntulli Pasilan asema 1870"
             onChange={(e) => {
               setKeyword(e.target.value);
             }}

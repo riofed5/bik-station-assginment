@@ -21,7 +21,7 @@ const batchSize = 100000;
 
 const insertStationToDb = (records: any[]) => {
   return new Promise((resolve, reject) => {
-    // Create the table named data
+    // Create the table name station
     pool.query(
       `
       CREATE TABLE IF NOT EXISTS station (
@@ -70,52 +70,90 @@ const insertStationToDb = (records: any[]) => {
   });
 };
 
-// Models
-const insertJourneyToDb = (records: any[]) => {
-  // Return a Promise that resolves if the operation was successful, or rejects if there was an error
+const checkJourneyTableExist = () => {
   return new Promise((resolve, reject) => {
-    // Create the table named data
     pool.query(
-      `
-    CREATE TABLE IF NOT EXISTS data (
-      id INT PRIMARY KEY AUTO_INCREMENT,
-      departure_time DATETIME,
-      return_time DATETIME,
-      departure_station_id INT,
-      departure_station_name VARCHAR(255),
-      return_station_id INT,
-      return_station_name VARCHAR(255),
-      covered_distance INT,
-      duration INT
-    );
-  `,
-      (error: any, results: any) => {
+      `SELECT TABLE_NAME FROM information_schema.TABLES WHERE TABLE_NAME = 'journey';`,
+      (error: any, result: any) => {
         if (error) {
           reject(error); // Reject the Promise if there was an error
           return;
         }
-
-        const values = records.map((row) => Object.values(row));
-
-        for (let i = 0; i < values.length; i += batchSize) {
-          const batch = values.slice(i, i + batchSize);
-
-          // Insert the data into the table using the bulk method
-          pool.query(
-            "INSERT INTO data (departure_time, return_time, departure_station_id, departure_station_name, return_station_id, return_station_name, covered_distance, duration) VALUES ?",
-            [batch],
-            (error: any) => {
-              if (error) {
-                reject(error); // Reject the Promise if there was an error
-                return;
-              }
-            }
-          );
+        if (result.length > 0) {
+          resolve(true);
+        } else {
+          resolve(false);
         }
-
-        resolve(true); // Resolve the Promise if the operation was successful
       }
     );
+  });
+};
+
+const createJourneyTable = () => {
+  // Create the table name `journey`
+  // Create unique index to avoid duplicated rows
+  // Set index for retrieve data faster for columns return_station_name, departure_station_name, covered_distance
+  const listOfQuery = [
+    `CREATE TABLE IF NOT EXISTS journey (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    departure_time DATETIME,
+    return_time DATETIME,
+    departure_station_id INT,
+    departure_station_name VARCHAR(255),
+    return_station_id INT,
+    return_station_name VARCHAR(255),
+    covered_distance INT,
+    duration INT
+  );`,
+    "ALTER TABLE journey ADD UNIQUE INDEX (departure_time, return_time, departure_station_id, departure_station_name, return_station_id, return_station_name, covered_distance, duration);",
+    "CREATE INDEX return_station_name_index ON journey (return_station_name);",
+    "CREATE INDEX departure_station_name_index ON journey (departure_station_name);",
+    "CREATE INDEX covered_distance_index ON journey (covered_distance);",
+  ];
+  return new Promise((resolve, reject) => {
+    for (let i = 0; i < listOfQuery.length; i++) {
+      pool.query(listOfQuery[i], (error: any) => {
+        if (error) {
+          reject(error); // Reject the Promise if there was an error
+          return;
+        }
+      });
+    }
+
+    resolve(true); // Resolve the Promise if the operation was successful
+  });
+};
+
+// Models
+const insertJourneyToDb = (records: any[]) => {
+  // Return a Promise that resolves if the operation was successful, or rejects if there was an error
+  return new Promise(async (resolve, reject) => {
+    const isTableJourneyExisted = await checkJourneyTableExist();
+
+    if (!isTableJourneyExisted) {
+      createJourneyTable();
+    }
+
+    const values = records.map((row) => Object.values(row));
+
+    for (let i = 0; i < values.length; i += batchSize) {
+      const batch = values.slice(i, i + batchSize);
+
+      // Insert the data into the table using the bulk method,
+      pool.query(
+        // avoid duplicated rows by INSERT IGNORE keyword
+        "INSERT IGNORE INTO journey (departure_time, return_time, departure_station_id, departure_station_name, return_station_id, return_station_name, covered_distance, duration) VALUES ?",
+        [batch],
+        (error: any) => {
+          if (error) {
+            reject(error); // Reject the Promise if there was an error
+            return;
+          }
+        }
+      );
+    }
+
+    resolve(true); // Resolve the Promise if the operation was successful
   });
 };
 
@@ -129,7 +167,7 @@ const getJourneyList = (params: string[]) => {
   return new Promise((resolve, reject) => {
     // Create the table named data
     pool.query(
-      `SELECT id, departure_station_name, return_station_name, covered_distance, duration FROM data WHERE id >=${from} and id <=${to}`,
+      `SELECT id, departure_station_name, return_station_name, covered_distance, duration FROM journey WHERE id >=${from} and id <=${to}`,
       (error: any, results: any) => {
         if (error) {
           reject(error); // Reject the Promise if there was an error
@@ -170,7 +208,7 @@ const getTop5Return = (station: string) => {
     // Create the table named data
     pool.query(
       `  SELECT return_station_name 
-      FROM data
+      FROM journey
       WHERE departure_station_name = '${station}'
       GROUP BY return_station_name
       ORDER BY COUNT(*) DESC
@@ -191,7 +229,7 @@ const getTop5Depart = (station: string) => {
     // Create the table named data
     pool.query(
       `  SELECT departure_station_name
-      FROM data
+      FROM journey
       WHERE return_station_name = '${station}'
       GROUP BY departure_station_name
       ORDER BY COUNT(*) DESC
@@ -211,7 +249,7 @@ const getTotalJourney = () => {
   return new Promise((resolve, reject) => {
     // Create the table named data
     pool.query(
-      "SELECT COUNT(*) AS totalRow FROM data;",
+      "SELECT COUNT(*) AS totalRow FROM journey;",
       (error: any, result: any) => {
         if (error) {
           reject(error); // Reject the Promise if there was an error
@@ -244,7 +282,7 @@ const getDetailStartingFromTheStation = (station: string) => {
     // Create the table named data
     pool.query(
       `SELECT departure_station_name, COUNT(*) as count, SUM(covered_distance) as total_distance
-      FROM data
+      FROM journey
       WHERE departure_station_name = '${station}'
       GROUP BY departure_station_name;`,
       (error: any, results: any) => {
@@ -263,7 +301,7 @@ const getDetailEndingAtTheStation = (station: string) => {
     // Create the table named data
     pool.query(
       `SELECT return_station_name, COUNT(*) as count, SUM(covered_distance) as total_distance
-      FROM data
+      FROM journey
       WHERE return_station_name = '${station}'
       GROUP BY return_station_name;`,
       (error: any, results: any) => {
@@ -305,13 +343,10 @@ const getJourneyByKeywords = (keywords: string[]) => {
 
   subQuery += condition;
 
-  console.log(
-    `SELECT id, departure_station_name, return_station_name, covered_distance, duration FROM data ${subQuery} LIMIT 50`
-  );
   return new Promise((resolve, reject) => {
     // Create the table named data
     pool.query(
-      `SELECT id, departure_station_name, return_station_name, covered_distance, duration FROM data ${subQuery} LIMIT 50`,
+      `SELECT departure_station_name, return_station_name, covered_distance, duration FROM journey ${subQuery} LIMIT 50`,
       (error: any, results: any) => {
         if (error) {
           reject(error); // Reject the Promise if there was an error
@@ -322,6 +357,23 @@ const getJourneyByKeywords = (keywords: string[]) => {
     );
   });
 };
+
+const getStationByName = (keyword: string) => {
+  return new Promise((resolve, reject) => {
+    // Create the table named data
+    pool.query(
+      `select * from station where Nimi like '%${keyword}%' LIMIT 50`,
+      (error: any, results: any) => {
+        if (error) {
+          reject(error); // Reject the Promise if there was an error
+          return;
+        }
+        resolve(results); // Resolve the Promise if the operation was successful
+      }
+    );
+  });
+};
+
 // const addNewJourney= (params:any[])=>{
 //   return new Promise((resolve, reject) => {
 //     // Create the table named data
@@ -493,7 +545,23 @@ const searchJourneyByKeywords = async (req: Request, res: Response) => {
     const result = await getJourneyByKeywords(params);
     res.json(result);
   } catch (err) {
-    console.error("get Total Rows Of Journey data failed: ", err);
+    console.error("Search Journey data failed: ", err);
+    res.status(400).send("Bad Request!");
+  }
+};
+
+const searchStationByName = async (req: Request, res: Response) => {
+  if (!req.query.searchKey) {
+    res.status(400).send("Missing SearchKeyword in query");
+  }
+
+  const params = req.query.searchKey as string;
+
+  try {
+    const result = await getStationByName(params);
+    res.json(result);
+  } catch (err) {
+    console.error("Search station data failed: ", err);
     res.status(400).send("Bad Request!");
   }
 };
@@ -635,6 +703,7 @@ app.get("/api/getTotalStation", getTotalRowsOfStation);
 
 app.get("/api/getStation", getStation);
 app.get("/api/getAddressStation", getAddressStation);
+app.get("/api/searchStationByName", searchStationByName);
 
 app.get(
   "/api/getTop5DepartStationEndingAtStation",

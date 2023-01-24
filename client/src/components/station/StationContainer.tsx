@@ -11,6 +11,27 @@ const StationContainer = () => {
   const [totalRowsStation, setTotalRowsStation] = useState(0);
   const [stations, setStations] = useState([]);
 
+  const fetchSearchedData = async (keyword: string) => {
+    try {
+      const resp = await fetch(
+        `${URL}/searchStationByName?searchKey=${keyword}`
+      );
+      const json = await resp.json();
+
+      //Set Search Data
+      setSearchedData(json);
+    } catch (e) {
+      throw e;
+    }
+  };
+
+  // Fetch data based on keyword search
+  useEffect(() => {
+    if (keyword !== "") {
+      fetchSearchedData(keyword);
+    }
+  }, [keyword]);
+
   // Fetching stations data based on page
   useEffect(() => {
     fetchStation(selectedPageStation);
@@ -46,7 +67,7 @@ const StationContainer = () => {
           <input
             ref={searchInputRef}
             type="tex"
-            placeholder="Search"
+            placeholder="Name of Station. Ex: 'Han'"
             onChange={(e) => {
               setKeyword(e.target.value);
             }}
