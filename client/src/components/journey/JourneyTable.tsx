@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { JourneyData, PropsJourneyTable } from "../../types";
 import { handleSortByKey } from "../../utility";
 
 const columns = [
@@ -12,22 +13,15 @@ const columns = [
   { title: "Duration (Minute)", sortable: true, key: "duration" },
 ];
 
-interface PropsTable {
-  data: any;
-  keyword: string;
-  handleChangePage: (text: string) => void;
-  page: number;
-  totalRows: number;
-}
 const JourneyTable = ({
   data,
   keyword,
   handleChangePage,
   page,
   totalRows,
-}: PropsTable) => {
-  const [tableData, setTableData] = useState([]);
-  const [sortedData, setSortedData] = useState([]);
+}: PropsJourneyTable) => {
+  const [tableData, setTableData] = useState<JourneyData[]>([]);
+  const [sortedData, setSortedData] = useState<JourneyData[]>([]);
   const [sortFromAtoZ, setSortFromAtoZ] = useState(true);
 
   useEffect(() => {
@@ -107,7 +101,7 @@ const JourneyTable = ({
             })}
           </tr>
           {(sortedData.length > 0 ? sortedData : tableData).map(
-            (singleData: any, index: any) => {
+            (singleData: JourneyData, index: number) => {
               return (
                 <tr key={index}>
                   <td>{singleData.departure_station_name}</td>

@@ -1,5 +1,7 @@
 import { useRef, useState, useEffect } from "react";
 import { URL } from "../../utility";
+import NewStation from "../Form/NewStation";
+import Modal from "../Modal/Modal";
 import StationTable from "./StationTable";
 
 const StationContainer = () => {
@@ -10,6 +12,7 @@ const StationContainer = () => {
   const [searchedData, setSearchedData] = useState([]);
   const [totalRowsStation, setTotalRowsStation] = useState(0);
   const [stations, setStations] = useState([]);
+  const [openModal, setOpenModal] = useState(false);
 
   const fetchSearchedData = async (keyword: string) => {
     try {
@@ -59,6 +62,11 @@ const StationContainer = () => {
       setSelectedPageStation(selectedPageStation - 1);
     }
   };
+
+  const handleOpenModal = () => {
+    setOpenModal(!openModal);
+  };
+
   return (
     <div className="container">
       <div style={{ margin: "20px 0" }}>
@@ -74,6 +82,7 @@ const StationContainer = () => {
             className="input-search"
           />
         </p>
+        <button onClick={handleOpenModal}>Add new station</button>
       </div>
       <StationTable
         data={keyword === "" ? stations : searchedData}
@@ -82,6 +91,12 @@ const StationContainer = () => {
         page={selectedPageStation}
         totalRows={totalRowsStation}
       />
+      <Modal
+        styles={{ display: openModal ? "block" : "none" }}
+        handleOpenModal={handleOpenModal}
+      >
+        <NewStation />
+      </Modal>
     </div>
   );
 };

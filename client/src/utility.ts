@@ -1,12 +1,16 @@
+import { JourneyData, StationData } from "./types";
+
 export const URL = "http://localhost:7000/api";
 
+type DataType = StationData[] | JourneyData[];
+
 export const handleSortByKey = (
-  arrayData: never[],
+  arrayData: DataType,
   sortOrder: boolean,
   key: string,
-  setData: (data: never[]) => void
+  setData: (data: any) => void
 ) => {
-  const sortedData = arrayData.sort(function (a, b) {
+  const sortedData = arrayData.sort(function (a: any, b: any) {
     const el1 = a[key];
     const el2 = b[key];
     return sortOrder
@@ -23,4 +27,15 @@ export const handleSortByKey = (
   });
 
   setData(sortedData);
+};
+
+export const fetchSpecificData = async (
+  endpoint: string,
+  stationName: string
+) => {
+  const response = await fetch(`${URL}/${endpoint}?station=${stationName}`);
+
+  const json = await response.json();
+
+  return json;
 };

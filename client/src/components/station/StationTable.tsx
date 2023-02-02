@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import { PropsStationTable, StationData } from "../../types";
 import { handleSortByKey } from "../../utility";
 
 const columns = [
@@ -7,23 +8,15 @@ const columns = [
   { title: "Station ID", sortable: true, key: "ID" },
 ];
 
-interface PropsTable {
-  data: any;
-  keyword: string;
-  handleChangePage: (text: string) => void;
-  page: number;
-  totalRows: number;
-}
-
 const StationTable = ({
   data,
   keyword,
   handleChangePage,
   page,
   totalRows,
-}: PropsTable) => {
-  const [tableData, setTableData] = useState([]);
-  const [sortedData, setSortedData] = useState([]);
+}: PropsStationTable) => {
+  const [tableData, setTableData] = useState<StationData[]>([]);
+  const [sortedData, setSortedData] = useState<StationData[]>([]);
   const [fromTo, setFromTo] = useState({ from: 0, to: 0 });
   const [nextBtnDisable, setNextBtnDisable] = useState(false);
 
@@ -103,7 +96,7 @@ const StationTable = ({
             })}
           </tr>
           {(sortedData.length > 0 ? sortedData : tableData).map(
-            (singleData: any) => {
+            (singleData: StationData) => {
               return (
                 <tr key={singleData.Nimi}>
                   <td>

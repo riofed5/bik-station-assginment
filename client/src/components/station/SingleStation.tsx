@@ -1,20 +1,12 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useParams } from "react-router-dom";
-import { URL } from "../../utility";
-
-type StationParams = {
-  nameOfStation: string;
-};
-
-const fetchSpecificData = async (endpoint: string, stationName: string) => {
-  const response = await fetch(`${URL}/${endpoint}?station=${stationName}`);
-
-  const json = await response.json();
-
-  return json;
-};
+import { fetchSpecificData } from "../../utility";
+import { StationParams } from "../../types";
+import CustomMap from "../Map/CustomMap";
 
 const SingleStation = () => {
+  const center = useMemo(() => ({ lat: 44, lng: -80 }), []);
+
   const { nameOfStation } = useParams<StationParams>();
   const [detail, setDetail] = useState({
     name: "",
@@ -23,14 +15,20 @@ const SingleStation = () => {
     numberOfJourneyEndingAt: 0,
     distanceOfJouneyStartFromStation: 0,
     distanceOfJouneyEndAtStation: 0,
-    top5Depart: [] as any[],
-    top5Return: [] as any[],
+    top5Depart: [] as string[],
+    top5Return: [] as string[],
   });
+
+  const [position, setPosition] = useState<
+    { lat: number; lng: number } | undefined
+  >(undefined);
 
   const fetchDetailStation = async (stationName = "") => {
     try {
       const address = await fetchSpecificData("getAddressStation", stationName);
       const addressString = `${address.Adress}`;
+
+      setPosition({ lng: address.x, lat: address.y });
 
       const startFromStation = await fetchSpecificData(
         "getDetailOfDepartStation",
@@ -121,6 +119,7 @@ const SingleStation = () => {
           </ul>
         </li>
       </ul>
+      <div>{position && <CustomMap position={position} />}</div>
     </div>
   );
 };
