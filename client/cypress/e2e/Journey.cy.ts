@@ -1,4 +1,3 @@
-import { ResponseType } from "../../src/types";
 import { URL } from "../../src/utility";
 
 describe("File Upload Form", () => {
@@ -71,8 +70,8 @@ describe("File Upload Form", () => {
       cy.get('button[name="station"]').should("exist");
       cy.get('button[name="station"]').click();
 
-      cy.wait("@uploadStation").then(({ response }) => {
-        const { statusCode, body } = response as ResponseType;
+      cy.wait("@uploadStation").then((xhr: any) => {
+        const { statusCode, body } = xhr.response;
         expect(statusCode).to.equal(200);
         expect(body).to.have.property("message", "Sucessfully!");
       });

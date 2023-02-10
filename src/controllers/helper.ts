@@ -58,11 +58,7 @@ const journeyValidation = (
   );
 };
 
-const readDataJourney = (
-  pathToSelectedFile: string,
-  records: any[],
-  notRecords: any[]
-) => {
+const readDataJourney = (pathToSelectedFile: string, records: any[]) => {
   return new Promise((resolve, reject) => {
     fs.createReadStream(pathToSelectedFile)
       .pipe(parse({ headers: true }))
@@ -90,9 +86,16 @@ const readDataJourney = (
         );
 
         if (isValidRow) {
-          records.push(row);
-        } else {
-          notRecords.push(row);
+          records.push({
+            departure_time,
+            return_time,
+            departure_station_id,
+            departure_station,
+            return_station_id,
+            return_station,
+            distance,
+            duration,
+          });
         }
       })
       .on("end", () => {
@@ -106,8 +109,9 @@ const readDataJourney = (
 
 const destructStationRow = (row: any) => {
   return {
+    fid: +row["FID"],
     id: +row["ID"],
-    name: row["Name"],
+    name: row["Nimi"],
     address: row["Adress"],
     x: +row["x"],
     y: +row["y"],
@@ -115,6 +119,7 @@ const destructStationRow = (row: any) => {
 };
 
 const stationValidation = (
+  fid: number,
   id: number,
   name: string,
   address: string,
@@ -123,6 +128,8 @@ const stationValidation = (
 ) => {
   const isLatLongValid = !(21.37 > x || x > 30.94 || 59.83 > y || y > 68.91);
   return (
+    Number.isInteger(fid) &&
+    fid > 0 &&
     Number.isInteger(id) &&
     id > 0 &&
     name != "" &&
@@ -136,10 +143,10 @@ const readDataStation = (pathToSelectedFile: string, records: any[]) => {
     fs.createReadStream(pathToSelectedFile)
       .pipe(parse({ headers: true }))
       .on("data", (row: any) => {
-        const { id, name, address, x, y } = destructStationRow(row);
-        const isValidRow = stationValidation(id, name, address, x, y);
+        const { fid, id, name, address, x, y } = destructStationRow(row);
+        const isValidRow = stationValidation(fid, id, name, address, x, y);
         if (isValidRow) {
-          records.push(row);
+          records.push({ fid, id, name, address, x, y });
         }
       })
       .on("end", () => {

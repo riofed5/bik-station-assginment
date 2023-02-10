@@ -16,9 +16,9 @@ import {
 } from "../models/station";
 
 // Station array data
-const validStationArr: any[] = [];
 
 const uploadStation = (req: Request, res: Response) => {
+  const validStationArr: any[] = [];
   upload(req, res, async function (err) {
     if (err instanceof multer.MulterError) {
       return res.status(500).json(err);

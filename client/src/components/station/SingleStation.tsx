@@ -30,7 +30,7 @@ const SingleStation = () => {
     try {
       const address = await fetchSpecificData("getAddressStation", stationName);
 
-      const addressString = `${address.Adress}`;
+      const addressString = `${address.Address}`;
 
       setDetail({
         name: stationName,

@@ -50,11 +50,11 @@ const inputs = [
   },
   {
     id: 6,
-    name: "Adress",
+    name: "Address",
     type: "text",
     placeholder: "Ex: Kägelviksvägen 2",
-    errorMessage: "Adress is not in valid format",
-    label: "Adress",
+    errorMessage: "Address is not in valid format",
+    label: "Address",
     required: true,
   },
   {
@@ -94,7 +94,7 @@ const NewStation = () => {
     Namn: "",
     Name: "",
     Osoite: "",
-    Adress: "",
+    Address: "",
     Kaupunki: "",
     Stad: "",
     Kapasiteet: 0,

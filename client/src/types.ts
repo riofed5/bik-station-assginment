@@ -2,18 +2,16 @@ export type PropsCustomMap = {
   position: { lng: number; lat: number };
 };
 
+export type ResponseType = {
+  statusCode: number;
+  body: {};
+};
+
 export type StationData = {
   FID: number;
   ID: number;
   Nimi: string;
-  Namn: string;
-  Name: string;
-  Osoite: string;
-  Adress: string;
-  Kaupunki: string;
-  Stad: string;
-  Operaattor: string;
-  Kapasiteet: number;
+  Address: string;
   x: number;
   y: number;
 };

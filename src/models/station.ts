@@ -39,35 +39,29 @@ const checkStationTableExist = () => {
 
 const createStationTable = () => {
   // Create the table name `station`
+  const listOfQuery = [
+    `CREATE TABLE IF NOT EXISTS solita.station (
+      FID INT PRIMARY KEY,
+      ID INT,
+      Nimi VARCHAR(255),
+      Address VARCHAR(255),
+      x FLOAT,
+      y FLOAT
+    );`,
+    "ALTER TABLE solita.journey ADD UNIQUE INDEX (FID, ID, Nimi, Address,x,y);",
+  ];
 
   return new Promise((resolve, reject) => {
-    // Create the table name station
-    pool.query(
-      `
-        CREATE TABLE IF NOT EXISTS solita.station (
-          FID INT PRIMARY KEY,
-          ID INT,
-          Nimi VARCHAR(255),
-          Namn VARCHAR(255),
-          Name VARCHAR(255),
-          Osoite VARCHAR(255),
-          Adress VARCHAR(255),
-          Kaupunki VARCHAR(255),
-          Stad VARCHAR(255),
-          Operaattor VARCHAR(255),
-          Kapasiteet INT,
-          x FLOAT,
-          y FLOAT
-      );
-    `,
-      (error: any, results: any) => {
+    for (let i = 0; i < listOfQuery.length; i++) {
+      pool.query(listOfQuery[i], (error: any) => {
         if (error) {
           reject(error); // Reject the Promise if there was an error
           return;
         }
-        resolve(true);
-      }
-    );
+      });
+    }
+
+    resolve(true); // Resolve the Promise if the operation was successful
   });
 };
 
@@ -80,7 +74,7 @@ const insertStationToDb = (records: any[]) => {
 
       // Insert the data into the table using the bulk method
       pool.query(
-        "INSERT INTO solita.station (FID, ID, Nimi, Namn, Name, Osoite, Adress, Kaupunki, Stad, Operaattor, Kapasiteet, x, y) VALUES ?",
+        "INSERT IGNORE INTO solita.station (FID, ID, Nimi, Address, x, y) VALUES ?",
         [batch],
         (error: any) => {
           if (error) {

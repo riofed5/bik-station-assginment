@@ -14,7 +14,6 @@ import {
 
 const uploadJourney = (req: Request, res: Response) => {
   const validJourneyArr: any[] = [];
-  const notValidJourneyArr: any[] = [];
 
   upload(req, res, async function (err) {
     if (err instanceof multer.MulterError) {
@@ -31,8 +30,7 @@ const uploadJourney = (req: Request, res: Response) => {
         // validate data
         const validateJourney = await readDataJourney(
           pathOfFile,
-          validJourneyArr,
-          notValidJourneyArr
+          validJourneyArr
         );
         if (validateJourney) {
           console.log("Sucessfully validate journey data");
