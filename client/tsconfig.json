@@ -16,11 +16,16 @@
     "module": "esnext",
     "moduleResolution": "node",
     "resolveJsonModule": true,
-    "isolatedModules": true,
+    "isolatedModules": false,
     "noEmit": true,
-    "jsx": "react-jsx"
+    "jsx": "react-jsx",
   },
+  "types": [
+    "cypress"
+  ],
   "include": [
-    "src"
+    "src",
+    "**/*.ts",
+    "cypress/e2e/Homepage.cy.ts",
   ]
 }

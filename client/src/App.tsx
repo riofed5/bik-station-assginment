@@ -1,9 +1,9 @@
-import FileUploadForm from "./components/FileUploadForm";
+import FileUploadForm from "./components/Form/FileUploadForm";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import NavigationBar from "./components/NavigationBar";
-import StationContainer from "./components/station/StationContainer";
-import SingleStation from "./components/station/SingleStation";
-import JourneyContainer from "./components/journey/JourneyContainer";
+import NavigationBar from "./components/navigation/NavigationBar";
+import StationContainer from "./components/Station/StationContainer";
+import SingleStation from "./components/Station/SingleStation";
+import JourneyContainer from "./components/Journey/JourneyContainer";
 
 function App() {
   return (
@@ -24,5 +24,3 @@ function App() {
 }
 
 export default App;
-
-// SELECT TABLE_NAME FROM information_schema.TABLES WHERE TABLE_NAME = 'data';

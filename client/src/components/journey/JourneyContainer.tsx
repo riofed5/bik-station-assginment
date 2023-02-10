@@ -5,6 +5,7 @@ import JourneyTable from "./JourneyTable";
 const JourneyContainer = () => {
   const searchInputRef = useRef(null);
 
+  const [loadingData, setLoadingData] = useState(false);
   const [selectedPageJourney, setSelectedPageJourney] = useState(1);
   const [keyword, setKeyword] = useState("");
   const [searchedData, setSearchedData] = useState([]);
@@ -22,7 +23,7 @@ const JourneyContainer = () => {
       //Set Search Data
       setSearchedData(json);
     } catch (e) {
-      throw e;
+      console.error("Fetch serach data is failed:", e);
     }
   };
 
@@ -36,10 +37,16 @@ const JourneyContainer = () => {
   // Fetching journeys data based on page
   useEffect(() => {
     fetchJourney(selectedPageJourney);
+  }, []);
+
+  useEffect(() => {
+    fetchJourney(selectedPageJourney);
   }, [selectedPageJourney]);
 
   const fetchJourney = async (page = 1) => {
     try {
+      setLoadingData(true);
+
       const jounreys = await fetch(`${URL}/getJourney?page=${page}`);
       const jouneyJson = await jounreys.json();
 
@@ -48,8 +55,10 @@ const JourneyContainer = () => {
 
       setJourneys(jouneyJson);
       setTotalRowsJourney(totalRowsJson.totalRow);
+      setLoadingData(false);
     } catch (err) {
-      throw new Error("Cannot fetch journeys data::" + err);
+      setLoadingData(false);
+      console.error("Cannot fetch journeys data::" + err);
     }
   };
 
@@ -77,13 +86,17 @@ const JourneyContainer = () => {
           />
         </p>
       </div>
-      <JourneyTable
-        data={keyword === "" ? journeys : searchedData}
-        keyword={keyword}
-        handleChangePage={handleChangePageJourney}
-        page={selectedPageJourney}
-        totalRows={totalRowsJourney}
-      />
+      {loadingData ? (
+        <p>Data is loading...</p>
+      ) : (
+        <JourneyTable
+          data={keyword === "" ? journeys : searchedData}
+          keyword={keyword}
+          handleChangePage={handleChangePageJourney}
+          page={selectedPageJourney}
+          totalRows={totalRowsJourney}
+        />
+      )}
     </div>
   );
 };

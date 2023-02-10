@@ -1,8 +1,8 @@
-import { upload } from "./helper";
+import { readDataStation, upload } from "./helper";
 import multer from "multer";
 import { Request, Response } from "express";
 import path from "path";
-import { validateDataStation } from "../utility/utility";
+import { isProd } from "../utility/utility";
 import {
   getAddressOfStation,
   getDetailEndingAtTheStation,
@@ -28,36 +28,33 @@ const uploadStation = (req: Request, res: Response) => {
 
     try {
       if (req.file) {
-        const pathOfFile = path.join(__dirname, `../${req.file?.path}`);
+        const pathOfFile = isProd()
+          ? req.file?.path
+          : path.join(__dirname, `../../${req.file?.path}`);
 
-        try {
-          // validate data
-          const validateResult = await validateDataStation(
-            pathOfFile,
-            validStationArr
-          );
-          console.log("validateResult: ", validateResult);
-          if (validateResult) {
-            console.log("");
-            // Insert read data to database
-            const insertDataToDbResult = await insertStationToDb(
-              validStationArr
-            );
-            console.log("insertDataToDbResult: ", insertDataToDbResult);
+        // validate data
+        const validateStation = await readDataStation(
+          pathOfFile,
+          validStationArr
+        );
+        if (validateStation) {
+          console.log("Sucessfully validate station data");
 
-            if (insertDataToDbResult) {
-              res.status(200).send({ status: "OK" });
-            }
+          // Insert read data to database
+          const insertStation = await insertStationToDb(validStationArr);
+
+          if (insertStation) {
+            console.log("Sucessfully inserting station data");
+
+            res.status(200).send({ message: "Sucessfully!" });
           }
-        } catch (err) {
-          console.log(err);
-          res.status(400).send("Imported data has been failed");
         }
       } else {
         console.log(new Error("Missing file in request"));
       }
     } catch (err) {
       console.log("Upload file station failed: ", err);
+      res.status(400).send("Imported data has been failed");
     }
   });
 };
@@ -65,6 +62,7 @@ const uploadStation = (req: Request, res: Response) => {
 const searchStationByName = async (req: Request, res: Response) => {
   if (!req.query.searchKey) {
     res.status(400).send("Missing SearchKeyword in query");
+    return;
   }
 
   const params = req.query.searchKey as string;
@@ -107,6 +105,7 @@ const getTop5DepartStationEndingAtStation = async (
 
   if (!req.query.station) {
     res.status(400).send("Missing station in query");
+    return;
   }
   params = req.query.station as string;
 
@@ -127,6 +126,7 @@ const getTop5ReturnStationStartFromStation = async (
 
   if (!req.query.station) {
     res.status(400).send("Missing station in query");
+    return;
   }
   params = req.query.station as string;
 
@@ -144,6 +144,7 @@ const getDetailOfDepartStation = async (req: Request, res: Response) => {
 
   if (!req.query.station) {
     res.status(400).send("Missing station in query");
+    return;
   }
   params = req.query.station as string;
 
@@ -161,6 +162,7 @@ const getDetailOfReturnStation = async (req: Request, res: Response) => {
 
   if (!req.query.station) {
     res.status(400).send("Missing station in query");
+    return;
   }
   params = req.query.station as string;
 
@@ -178,6 +180,7 @@ const getAddressStation = async (req: Request, res: Response) => {
 
   if (!req.query.station) {
     res.status(400).send("Missing station in query");
+    return;
   }
   params = req.query.station as string;
 

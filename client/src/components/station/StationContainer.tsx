@@ -6,6 +6,7 @@ import StationTable from "./StationTable";
 
 const StationContainer = () => {
   const searchInputRef = useRef(null);
+  const [loadingData, setLoadingData] = useState(false);
 
   const [selectedPageStation, setSelectedPageStation] = useState(1);
   const [keyword, setKeyword] = useState("");
@@ -24,7 +25,7 @@ const StationContainer = () => {
       //Set Search Data
       setSearchedData(json);
     } catch (e) {
-      throw e;
+      console.error("Failed to fetch search data: " + e);
     }
   };
 
@@ -38,10 +39,16 @@ const StationContainer = () => {
   // Fetching stations data based on page
   useEffect(() => {
     fetchStation(selectedPageStation);
+  }, []);
+
+  useEffect(() => {
+    fetchStation(selectedPageStation);
   }, [selectedPageStation]);
 
   const fetchStation = async (page = 1) => {
     try {
+      setLoadingData(true);
+
       const response = await fetch(`${URL}/getStation?page=${page}`);
       const json = await response.json();
 
@@ -50,8 +57,9 @@ const StationContainer = () => {
 
       setStations(json);
       setTotalRowsStation(totalRowsJson.totalRow);
+      setLoadingData(false);
     } catch (err) {
-      throw new Error("Cannot fetch stations data::" + err);
+      console.error("Cannot fetch stations data::" + err);
     }
   };
 
@@ -84,13 +92,17 @@ const StationContainer = () => {
         </p>
         <button onClick={handleOpenModal}>Add new station</button>
       </div>
-      <StationTable
-        data={keyword === "" ? stations : searchedData}
-        keyword={keyword}
-        handleChangePage={handleChangePageStation}
-        page={selectedPageStation}
-        totalRows={totalRowsStation}
-      />
+      {loadingData ? (
+        <p>Data is loading...</p>
+      ) : (
+        <StationTable
+          data={keyword === "" ? stations : searchedData}
+          keyword={keyword}
+          handleChangePage={handleChangePageStation}
+          page={selectedPageStation}
+          totalRows={totalRowsStation}
+        />
+      )}
       <Modal
         styles={{ display: openModal ? "block" : "none" }}
         handleOpenModal={handleOpenModal}

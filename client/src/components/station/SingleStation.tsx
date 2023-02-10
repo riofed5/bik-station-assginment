@@ -11,6 +11,9 @@ const SingleStation = () => {
   const [detail, setDetail] = useState({
     name: "",
     address: "",
+  });
+
+  const [additionalDetail, setAdditionalDetail] = useState({
     numberOfJourneyStartFrom: 0,
     numberOfJourneyEndingAt: 0,
     distanceOfJouneyStartFromStation: 0,
@@ -23,13 +26,25 @@ const SingleStation = () => {
     { lat: number; lng: number } | undefined
   >(undefined);
 
-  const fetchDetailStation = async (stationName = "") => {
+  const fetchDetail = async (stationName = "") => {
     try {
       const address = await fetchSpecificData("getAddressStation", stationName);
+
       const addressString = `${address.Adress}`;
 
-      setPosition({ lng: address.x, lat: address.y });
+      setDetail({
+        name: stationName,
+        address: addressString,
+      });
 
+      setPosition({ lng: address.x, lat: address.y });
+    } catch (err) {
+      console.error("Fetching detail of station failed: " + err);
+    }
+  };
+
+  const fetchAdditionalDetail = async (stationName = "") => {
+    try {
       const startFromStation = await fetchSpecificData(
         "getDetailOfDepartStation",
         stationName
@@ -57,9 +72,7 @@ const SingleStation = () => {
         (el) => el.return_station_name
       );
 
-      setDetail({
-        name: stationName,
-        address: addressString,
+      setAdditionalDetail({
         numberOfJourneyStartFrom: startFromStation[0].count,
         numberOfJourneyEndingAt: endAtStation[0].count,
         distanceOfJouneyStartFromStation: startFromStation[0].total_distance,
@@ -68,13 +81,14 @@ const SingleStation = () => {
         top5Return: top5Return,
       });
     } catch (err) {
-      throw new Error("Fetching detail of station failed: " + err);
+      console.error("Fetching detail of station failed: " + err);
     }
   };
 
   useEffect(() => {
     if (nameOfStation) {
-      fetchDetailStation(nameOfStation);
+      fetchDetail(nameOfStation);
+      fetchAdditionalDetail(nameOfStation);
     }
   }, [nameOfStation]);
 
@@ -86,25 +100,25 @@ const SingleStation = () => {
         <li>Address : {detail.address}</li>
         <li>
           Total number of journeys starting from the station :{" "}
-          {detail.numberOfJourneyStartFrom}
+          {additionalDetail.numberOfJourneyStartFrom}
         </li>
         <li>
           Total number of journeys ending at the station :{" "}
-          {detail.numberOfJourneyEndingAt}
+          {additionalDetail.numberOfJourneyEndingAt}
         </li>
         <li>
           The average distance of a journey starting from the station :{" "}
-          {detail.distanceOfJouneyStartFromStation / 1000} km
+          {additionalDetail.distanceOfJouneyStartFromStation / 1000} km
         </li>
         <li>
           The average distance of a journey ending at the station :{" "}
-          {detail.distanceOfJouneyEndAtStation / 1000} km
+          {additionalDetail.distanceOfJouneyEndAtStation / 1000} km
         </li>
         <li>
           Top 5 most popular departure stations for journeys ending at the
           station
           <ul>
-            {detail.top5Depart.map((name) => (
+            {additionalDetail.top5Depart.map((name) => (
               <li key={name}>{name}</li>
             ))}
           </ul>
@@ -113,7 +127,7 @@ const SingleStation = () => {
           Top 5 most popular return stations for journeys starting from the
           station
           <ul>
-            {detail.top5Return.map((name) => (
+            {additionalDetail.top5Return.map((name) => (
               <li key={name}>{name}</li>
             ))}
           </ul>

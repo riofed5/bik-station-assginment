@@ -1,4 +1,4 @@
-import pool from "../database/db";
+import pool from "../config/db";
 
 const batchSize = 100000;
 
@@ -26,7 +26,7 @@ const createJourneyTable = () => {
   // Create unique index to avoid duplicated rows
   // Set index for retrieve data faster for columns return_station_name, departure_station_name, covered_distance
   const listOfQuery = [
-    `CREATE TABLE IF NOT EXISTS journey (
+    `CREATE TABLE IF NOT EXISTS solita.journey (
       id INT PRIMARY KEY AUTO_INCREMENT,
       departure_time DATETIME,
       return_time DATETIME,
@@ -37,10 +37,10 @@ const createJourneyTable = () => {
       covered_distance INT,
       duration INT
     );`,
-    "ALTER TABLE journey ADD UNIQUE INDEX (departure_time, return_time, departure_station_id, departure_station_name, return_station_id, return_station_name, covered_distance, duration);",
-    "CREATE INDEX return_station_name_index ON journey (return_station_name);",
-    "CREATE INDEX departure_station_name_index ON journey (departure_station_name);",
-    "CREATE INDEX covered_distance_index ON journey (covered_distance);",
+    "ALTER TABLE solita.journey ADD UNIQUE INDEX (departure_time, return_time, departure_station_id, departure_station_name, return_station_id, return_station_name, covered_distance, duration);",
+    "CREATE INDEX return_station_name_index ON solita.journey (return_station_name);",
+    "CREATE INDEX departure_station_name_index ON solita.journey (departure_station_name);",
+    "CREATE INDEX covered_distance_index ON solita.journey (covered_distance);",
   ];
   return new Promise((resolve, reject) => {
     for (let i = 0; i < listOfQuery.length; i++) {
@@ -59,12 +59,6 @@ const createJourneyTable = () => {
 const insertJourneyToDb = (records: any[]) => {
   // Return a Promise that resolves if the operation was successful, or rejects if there was an error
   return new Promise(async (resolve, reject) => {
-    const isTableJourneyExisted = await checkJourneyTableExist();
-
-    if (!isTableJourneyExisted) {
-      createJourneyTable();
-    }
-
     const values = records.map((row) => Object.values(row));
 
     for (let i = 0; i < values.length; i += batchSize) {
@@ -72,8 +66,8 @@ const insertJourneyToDb = (records: any[]) => {
 
       // Insert the data into the table using the bulk method,
       pool.query(
-        // avoid duplicated rows by INSERT IGNORE keyword
-        "INSERT IGNORE INTO journey (departure_time, return_time, departure_station_id, departure_station_name, return_station_id, return_station_name, covered_distance, duration) VALUES ?",
+        // avoid duplicated throw error by INSERT IGNORE keyword as we already set each row is unique
+        "INSERT IGNORE INTO solita.journey (departure_time, return_time, departure_station_id, departure_station_name, return_station_id, return_station_name, covered_distance, duration) VALUES ?",
         [batch],
         (error: any) => {
           if (error) {
@@ -98,7 +92,7 @@ const getJourneyList = (params: string[]) => {
   return new Promise((resolve, reject) => {
     // Create the table named data
     pool.query(
-      `SELECT id, departure_station_name, return_station_name, covered_distance, duration FROM journey WHERE id >=${from} and id <=${to}`,
+      `SELECT id, departure_station_name, return_station_name, covered_distance, duration FROM solita.journey WHERE id >=${from} and id <=${to}`,
       (error: any, results: any) => {
         if (error) {
           reject(error); // Reject the Promise if there was an error
@@ -114,7 +108,7 @@ const getTotalJourney = () => {
   return new Promise((resolve, reject) => {
     // Create the table named data
     pool.query(
-      "SELECT COUNT(*) AS totalRow FROM journey;",
+      "SELECT COUNT(*) AS totalRow FROM solita.journey;",
       (error: any, result: any) => {
         if (error) {
           reject(error); // Reject the Promise if there was an error
@@ -141,7 +135,7 @@ const getJourneyByKeywords = (keywords: string[]) => {
   return new Promise((resolve, reject) => {
     // Create the table named data
     pool.query(
-      `SELECT departure_station_name, return_station_name, covered_distance, duration FROM journey ${subQuery} LIMIT 50`,
+      `SELECT departure_station_name, return_station_name, covered_distance, duration FROM solita.journey ${subQuery} LIMIT 50`,
       (error: any, results: any) => {
         if (error) {
           reject(error); // Reject the Promise if there was an error
@@ -177,4 +171,6 @@ export {
   getJourneyList,
   getTotalJourney,
   getJourneyByKeywords,
+  checkJourneyTableExist,
+  createJourneyTable,
 };

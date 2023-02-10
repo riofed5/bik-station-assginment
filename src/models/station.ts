@@ -1,4 +1,4 @@
-import pool from "../database/db";
+import pool from "../config/db";
 
 const batchSize = 100000;
 
@@ -6,7 +6,7 @@ const getAddressOfStation = (station: string) => {
   return new Promise((resolve, reject) => {
     // Create the table named data
     pool.query(
-      `select * from station where Nimi='${station}'`,
+      `select * from solita.station where Nimi='${station}'`,
       (error: any, results: any) => {
         if (error) {
           reject(error); // Reject the Promise if there was an error
@@ -18,12 +18,33 @@ const getAddressOfStation = (station: string) => {
   });
 };
 
-const insertStationToDb = (records: any[]) => {
+const checkStationTableExist = () => {
+  return new Promise((resolve, reject) => {
+    pool.query(
+      `SELECT TABLE_NAME FROM information_schema.TABLES WHERE TABLE_NAME = 'station';`,
+      (error: any, result: any) => {
+        if (error) {
+          reject(error); // Reject the Promise if there was an error
+          return;
+        }
+        if (result.length > 0) {
+          resolve(true);
+        } else {
+          resolve(false);
+        }
+      }
+    );
+  });
+};
+
+const createStationTable = () => {
+  // Create the table name `station`
+
   return new Promise((resolve, reject) => {
     // Create the table name station
     pool.query(
       `
-        CREATE TABLE IF NOT EXISTS station (
+        CREATE TABLE IF NOT EXISTS solita.station (
           FID INT PRIMARY KEY,
           ID INT,
           Nimi VARCHAR(255),
@@ -44,28 +65,33 @@ const insertStationToDb = (records: any[]) => {
           reject(error); // Reject the Promise if there was an error
           return;
         }
-
-        const values = records.map((row) => Object.values(row));
-
-        for (let i = 0; i < values.length; i += batchSize) {
-          const batch = values.slice(i, i + batchSize);
-
-          // Insert the data into the table using the bulk method
-          pool.query(
-            "INSERT INTO station (FID, ID, Nimi, Namn, Name, Osoite, Adress, Kaupunki, Stad, Operaattor, Kapasiteet, x, y) VALUES ?",
-            [batch],
-            (error: any) => {
-              if (error) {
-                reject(error); // Reject the Promise if there was an error
-                return;
-              }
-            }
-          );
-        }
-
-        resolve(true); // Resolve the Promise if the operation was successful
+        resolve(true);
       }
     );
+  });
+};
+
+const insertStationToDb = (records: any[]) => {
+  return new Promise((resolve, reject) => {
+    const values = records.map((row) => Object.values(row));
+
+    for (let i = 0; i < values.length; i += batchSize) {
+      const batch = values.slice(i, i + batchSize);
+
+      // Insert the data into the table using the bulk method
+      pool.query(
+        "INSERT INTO solita.station (FID, ID, Nimi, Namn, Name, Osoite, Adress, Kaupunki, Stad, Operaattor, Kapasiteet, x, y) VALUES ?",
+        [batch],
+        (error: any) => {
+          if (error) {
+            reject(error); // Reject the Promise if there was an error
+            return;
+          }
+        }
+      );
+    }
+
+    resolve(true); // Resolve the Promise if the operation was successful
   });
 };
 
@@ -77,7 +103,7 @@ const getStationList = (params: string[]) => {
   return new Promise((resolve, reject) => {
     // Create the table named data
     pool.query(
-      `select * from station LIMIT 50 OFFSET ${offsetValue}`,
+      `select * from solita.station LIMIT 50 OFFSET ${offsetValue}`,
       (error: any, results: any) => {
         if (error) {
           if (error.code === "ER_NO_SUCH_TABLE") {
@@ -98,7 +124,7 @@ const getTop5Return = (station: string) => {
     // Create the table named data
     pool.query(
       `  SELECT return_station_name 
-        FROM journey
+        FROM solita.journey
         WHERE departure_station_name = '${station}'
         GROUP BY return_station_name
         ORDER BY COUNT(*) DESC
@@ -119,7 +145,7 @@ const getTop5Depart = (station: string) => {
     // Create the table named data
     pool.query(
       `  SELECT departure_station_name
-        FROM journey
+        FROM solita.journey
         WHERE return_station_name = '${station}'
         GROUP BY departure_station_name
         ORDER BY COUNT(*) DESC
@@ -139,7 +165,7 @@ const getTotalStation = () => {
   return new Promise((resolve, reject) => {
     // Create the table named data
     pool.query(
-      "SELECT COUNT(*) AS totalRow FROM station",
+      "SELECT COUNT(*) AS totalRow FROM solita.station",
       (error: any, result: any) => {
         if (error) {
           reject(error); // Reject the Promise if there was an error
@@ -156,7 +182,7 @@ const getDetailStartingFromTheStation = (station: string) => {
     // Create the table named data
     pool.query(
       `SELECT departure_station_name, COUNT(*) as count, SUM(covered_distance) as total_distance
-        FROM journey
+        FROM solita.journey
         WHERE departure_station_name = '${station}'
         GROUP BY departure_station_name;`,
       (error: any, results: any) => {
@@ -175,7 +201,7 @@ const getDetailEndingAtTheStation = (station: string) => {
     // Create the table named data
     pool.query(
       `SELECT return_station_name, COUNT(*) as count, SUM(covered_distance) as total_distance
-        FROM journey
+        FROM solita.journey
         WHERE return_station_name = '${station}'
         GROUP BY return_station_name;`,
       (error: any, results: any) => {
@@ -193,7 +219,7 @@ const getStationByName = (keyword: string) => {
   return new Promise((resolve, reject) => {
     // Create the table named data
     pool.query(
-      `select * from station where Nimi like '%${keyword}%' LIMIT 50`,
+      `select * from solita.station where Nimi like '%${keyword}%' LIMIT 50`,
       (error: any, results: any) => {
         if (error) {
           reject(error); // Reject the Promise if there was an error
@@ -215,4 +241,6 @@ export {
   getTotalStation,
   getAddressOfStation,
   getStationByName,
+  checkStationTableExist,
+  createStationTable,
 };

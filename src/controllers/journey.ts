@@ -1,9 +1,8 @@
-import { upload } from "./helper";
+import { readDataJourney, upload } from "./helper";
 import multer from "multer";
 import { Request, Response } from "express";
-import fs from "fs";
 import path from "path";
-import { validateDataJourney, writeDataToFile } from "../utility/utility";
+import { isProd } from "../utility/utility";
 import {
   getJourneyByKeywords,
   getJourneyList,
@@ -12,69 +11,46 @@ import {
 } from "../models/journey";
 
 // Journey array data
-const validJourneyArr: any[] = [];
-const notValidJourneyArr: any[] = [];
 
 const uploadJourney = (req: Request, res: Response) => {
+  const validJourneyArr: any[] = [];
+  const notValidJourneyArr: any[] = [];
+
   upload(req, res, async function (err) {
     if (err instanceof multer.MulterError) {
       return res.status(500).json(err);
     } else if (err) {
       return res.status(500).json(err);
     }
-
     try {
       if (req.file) {
-        const pathOfFile = path.join(__dirname, `../${req.file?.path}`);
+        const pathOfFile = isProd()
+          ? req.file?.path
+          : path.join(__dirname, `../../${req.file?.path}`);
 
-        try {
-          // validate data
-          const validateResult = await validateDataJourney(
-            pathOfFile,
-            validJourneyArr,
-            notValidJourneyArr
-          );
-          console.log("validateResult: ", validateResult);
-          if (validateResult) {
-            // Write not valid data to file
-            const writeDataToFileResult = await writeDataToFile(
-              notValidJourneyArr
-            );
+        // validate data
+        const validateJourney = await readDataJourney(
+          pathOfFile,
+          validJourneyArr,
+          notValidJourneyArr
+        );
+        if (validateJourney) {
+          console.log("Sucessfully validate journey data");
 
-            // Insert read data to database
-            const insertDataToDbResult = await insertJourneyToDb(
-              validJourneyArr
-            );
-            console.log("writeDataToFileResult: ", writeDataToFileResult);
-            console.log("insertDataToDbResult: ", insertDataToDbResult);
+          // Insert read data to database
+          const insertJourney = await insertJourneyToDb(validJourneyArr);
 
-            if (writeDataToFileResult && insertDataToDbResult) {
-              fs.access(
-                path.join(__dirname, "../download/NotValidData.csv"),
-                fs.constants.F_OK,
-                (error) => {
-                  if (error) {
-                    console.log("File does not exist");
-                    res.status(200).send({ status: false });
-                  } else {
-                    console.log("File exists");
-                    res
-                      .status(200)
-                      .send({ status: true, fileName: "NotValidData.csv" });
-                  }
-                }
-              );
-            }
+          if (insertJourney) {
+            console.log("Sucessfully inserting journey data");
+            res.status(200).send({ message: "Sucessfully!" });
           }
-        } catch (err) {
-          console.log(err);
-          res.status(400).send("Imported data has been failed");
         }
       } else {
         console.log(new Error("Missing file in request"));
       }
     } catch (err) {
       console.log("Upload file Journey failed: ", err);
+      res.status(400).send("Imported data has been failed");
     }
   });
 };
@@ -104,6 +80,7 @@ const getTotalRowsOfJourney = async (req: Request, res: Response) => {
 const searchJourneyByKeywords = async (req: Request, res: Response) => {
   if (!req.query.searchKey) {
     res.status(400).send("Missing SearchKeyword in query");
+    return;
   }
 
   const params = (req.query.searchKey as string).split(" ");
@@ -118,7 +95,13 @@ const searchJourneyByKeywords = async (req: Request, res: Response) => {
 };
 
 const downloadFileJourney = (req: Request, res: Response) => {
-  res.sendFile(path.join(__dirname, "../download/NotValidData.csv"));
+  if (!req.query.fileName) {
+    res.status(400).send("Missing file name in query");
+    return;
+  }
+  const fileName = req.query.fileName;
+
+  res.sendFile(path.join(__dirname, `../download/${fileName}`));
 };
 
 export {

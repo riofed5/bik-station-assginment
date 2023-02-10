@@ -25,6 +25,10 @@ code {
   margin: 0 20px;
 }
 
+.subContainer {
+  margin: 20px 0;
+}
+
 /* Style for table */
 #customers {
   font-family: Arial, Helvetica, sans-serif;
